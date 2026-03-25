@@ -1,5 +1,12 @@
 # how to run
 
+set openrouter key
+
+```bash
+cd backend/masonai
+echo "OPENROUTER_KEY=\"<api key goes here>\"" > .env
+```
+
 run backend
 
 ```bash
