@@ -2,12 +2,16 @@
 
 run backend
 
-`cd backend/masonai`
-`uv sync`
-`uv run src/main.py`
+```bash
+cd backend/masonai
+uv sync
+uv run src/main.py
+```
 
 run frontend
 
-`cd frontend/masonai`
-`npm install`
-`npm run dev`
+```bash
+cd frontend/masonai
+npm install
+npm run dev
+```
