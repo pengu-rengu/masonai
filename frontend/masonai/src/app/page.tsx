@@ -1,6 +1,7 @@
 "use client";
 import {
   Box,
+  Button,
   IconButton,
   List,
   ListItem,
@@ -12,6 +13,8 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import GroupIcon from "@mui/icons-material/Group";
 import SendIcon from "@mui/icons-material/Send";
 import { useState } from "react";
 import Markdown from "react-markdown";
@@ -91,6 +94,22 @@ function Sidebar({ chats, selected, onSelect }: {
       msOverflowStyle: "none",
       "&::-webkit-scrollbar": { display: "none" }
     }}>
+      <Stack spacing={0} sx={{ px: 1, pb: 1 }}>
+        <Button
+          variant="text"
+          startIcon={<CalendarMonthIcon />}
+          sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
+        >
+          Schedule
+        </Button>
+        <Button
+          variant="text"
+          startIcon={<GroupIcon />}
+          sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
+        >
+          Social
+        </Button>
+      </Stack>
       <Typography variant="h6" sx={{ px: 2, pb: 2 }}>Chats</Typography>
       <List disablePadding>
         {chats.map((chat, i) => (
