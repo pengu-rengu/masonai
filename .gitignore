@@ -6,3 +6,12 @@ node_modules
 
 .DS_Store
 .env
+
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local

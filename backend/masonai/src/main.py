@@ -1,4 +1,4 @@
-from fetch_sections import fetch_sections, Term
+from fetch_academics import fetch_sections, Term
 from llm import query_llm
 from openrouter import OpenRouter
 from flask import Flask, jsonify, request
