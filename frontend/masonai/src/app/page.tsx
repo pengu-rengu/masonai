@@ -10,17 +10,10 @@ interface Message {
   content: string;
 }
 
-interface MessageItemProps {
-  role: Message["role"];
-  text: string;
-  messageMaxWidth: {
-    xs: string;
-    sm: string;
-    md: string;
-  };
-}
-
-function MessageItem({ role, text, messageMaxWidth }: MessageItemProps) {
+function MessageItem({ role, text }: {
+  role: Message["role"],
+  text: string
+}) {
   const isUser = role === "user";
 
   return (
@@ -29,22 +22,18 @@ function MessageItem({ role, text, messageMaxWidth }: MessageItemProps) {
       sx={{
         display: "flex",
         justifyContent: isUser ? "flex-end" : "flex-start",
-        alignItems: "flex-start",
-        py: 0.75,
+        py: 1,
       }}
     >
       {isUser ? (
         <Box
           sx={{
-            maxWidth: messageMaxWidth,
-            minWidth: 0,
             px: 2,
-            py: 1.25,
+            py: 2,
             borderRadius: 3,
             borderBottomRightRadius: 1,
             bgcolor: "primary.main",
             color: "primary.contrastText",
-            boxShadow: 1,
           }}
         >
           <Typography sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
@@ -52,27 +41,7 @@ function MessageItem({ role, text, messageMaxWidth }: MessageItemProps) {
           </Typography>
         </Box>
       ) : (
-        <Box
-          sx={{
-            width: messageMaxWidth,
-            minWidth: 0,
-            color: "text.primary",
-            wordBreak: "break-word",
-            "& > :first-of-type": { mt: 0 },
-            "& > :last-child": { mb: 0 },
-            "& p": { my: 0 },
-            "& ul, & ol": { my: 1, pl: 3 },
-            "& pre": {
-              overflowX: "auto",
-              p: 1.5,
-              borderRadius: 2,
-              bgcolor: "rgba(255, 255, 255, 0.06)",
-            },
-            "& code": {
-              fontFamily: "monospace",
-            },
-          }}
-        >
+        <Box>
           <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
         </Box>
       )}
@@ -84,7 +53,6 @@ export default function Home() {
   const [context, setContext] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const messageMaxWidth = { xs: "85%", sm: "78%", md: "70%" };
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -119,8 +87,7 @@ export default function Home() {
   return (
     <Stack spacing={2} sx={{ height: '100vh', width: "80vw", pt: 2, pb: 2, mx: 'auto' }}>
       <List sx={{
-        pl: 2,
-        pr: 2,
+        px: 2,
         overflowY: 'auto', 
         flexGrow: 1,
         scrollbarWidth: 'none', // Firefox
@@ -169,7 +136,6 @@ export default function Home() {
                 key={i}
                 role={message.role}
                 text={text}
-                messageMaxWidth={messageMaxWidth}
               />
             );
           }
