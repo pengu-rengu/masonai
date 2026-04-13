@@ -46,7 +46,13 @@ def filter_models[ModelType: BaseModel](
     models: list[ModelType],
     filters: dict[str, Filter]
 ) -> list[ModelType]:
-    return [
-        model for model in models
-        if all(flt.matches(getattr(model, field_name)) for field_name, flt in filters.items())
-    ]
+    results = []
+    for model in models:
+        keep = True
+        for field_name, flt in filters.items():
+            if not flt.matches(getattr(model, field_name)):
+                keep = False
+                break
+        if keep:
+            results.append(model)
+    return results

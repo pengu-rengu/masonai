@@ -14,8 +14,11 @@ import {
   Typography
 } from "@mui/material";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 import GroupIcon from "@mui/icons-material/Group";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import SendIcon from "@mui/icons-material/Send";
+import { useColorScheme } from "@mui/material/styles";
 import { useLayoutEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -27,6 +30,7 @@ interface Message {
 }
 
 const MODELS = ["Claude", "Gemini", "GPT"];
+const TOP_BAR_CONTROL_WIDTH = 120;
 
 const PLACEHOLDER_CHATS = [
   "CS 101 Homework Help",
@@ -49,6 +53,29 @@ const PLACEHOLDER_CHATS = [
   "Transfer Credits"
 ];
 
+function ThemeToggleButton() {
+  const { mode, setMode, systemMode } = useColorScheme();
+  const activeMode = mode === "system" ? systemMode : mode;
+
+  if (!activeMode) {
+    return (
+      <IconButton disabled sx={{ visibility: "hidden" }} tabIndex={-1} aria-hidden>
+        <DarkModeIcon />
+      </IconButton>
+    );
+  }
+
+  const isDarkMode = activeMode === "dark";
+  const nextMode = isDarkMode ? "light" : "dark";
+  const buttonLabel = isDarkMode ? "Switch to light mode" : "Switch to dark mode";
+
+  return (
+    <IconButton aria-label={buttonLabel} onClick={() => setMode(nextMode)}>
+      {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+    </IconButton>
+  );
+}
+
 function TopBar({ title, model, onModelChange }: {
   title: string;
   model: string;
@@ -64,7 +91,7 @@ function TopBar({ title, model, onModelChange }: {
         size="small"
         value={model}
         onChange={(event) => onModelChange(event.target.value)}
-        sx={{ minWidth: 120 }}
+        sx={{ width: TOP_BAR_CONTROL_WIDTH }}
       >
         {MODELS.map((name) => (
           <MenuItem key={name} value={name}>{name}</MenuItem>
@@ -73,7 +100,9 @@ function TopBar({ title, model, onModelChange }: {
       <Typography variant="h6" sx={{ flexGrow: 1, textAlign: "center" }}>
         {title}
       </Typography>
-      <Box sx={{ minWidth: 120 }} />
+      <Box sx={{ width: TOP_BAR_CONTROL_WIDTH, display: "flex", justifyContent: "flex-end" }}>
+        <ThemeToggleButton />
+      </Box>
     </Stack>
   );
 }

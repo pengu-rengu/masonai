@@ -43,9 +43,7 @@ def fetch_subjects() -> list[Subject]:
     
     left_col = soup.find("div", id = "left-col")
     list = left_col.find("ul", class_ = "nav levelone")
-    print(list.prettify())
-
-
+    
     for item in list.find_all("li"):
         parts = item.text.split("(")
         subject = Subject(
@@ -138,9 +136,3 @@ def fetch_sections(year: int, term: Term, subject: str, course_num: int) -> tupl
             failed += 1
 
     return sections, failed
-
-if __name__ == "__main__":
-    subjects = fetch_subjects()
-
-    for subject in subjects:
-        print(subject.model_dump_json(indent=2))

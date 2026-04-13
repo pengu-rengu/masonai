@@ -23,19 +23,21 @@ class MessageCommand(BaseModel):
 class ListSubjectsCommand(BaseModel):
     command: Literal["list_subjects"]
     filters: dict[str, Filter] = {}
+    limit: int = Field(ge=1, le=10)
 
     def run(self) -> str:
-        subjects = filter_models(fetch_subjects(), self.filters)
+        subjects = filter_models(fetch_subjects(), self.filters)[:self.limit]
         return format_models(subjects)
 
 class ListCoursesCommand(BaseModel):
     command: Literal["list_courses"]
     subject: str
     filters: dict[str, Filter] = {}
+    limit: int = Field(ge=1, le=10)
 
     def run(self) -> str:
         courses, failed = fetch_courses(self.subject.upper())
-        courses = filter_models(courses, self.filters)
+        courses = filter_models(courses, self.filters)[:self.limit]
         return f"{format_models(courses)}\n\nFailed to parse {failed} courses"
 
 class ListSectionsCommand(BaseModel):
@@ -45,6 +47,7 @@ class ListSectionsCommand(BaseModel):
     subject: str
     course_num: int
     filters: dict[str, Filter] = {}
+    limit: int = Field(ge=1, le=10)
 
     def run(self) -> str:
         term_enum = {
@@ -53,7 +56,7 @@ class ListSectionsCommand(BaseModel):
             "fall": Term.FALL
         }[self.term]
         sections, failed = fetch_sections(self.year, term_enum, self.subject.upper(), self.course_num)
-        sections = filter_models(sections, self.filters)
+        sections = filter_models(sections, self.filters)[:self.limit]
         return f"{format_models(sections)}\n\nFailed to parse {failed} sections"
 
 Command = Annotated[
@@ -69,7 +72,7 @@ JSON_SCHEMA = {
 }
 
 def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDict]) -> str:
-    """
+    
     response = open_router.chat.send(
         model = model,
         messages = context,
@@ -86,3 +89,4 @@ def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDic
         "command": "message",
         "contents": "This is a mock response"
     })
+    """
