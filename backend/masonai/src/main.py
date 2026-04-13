@@ -1,11 +1,9 @@
-from fetch_academics import fetch_sections, Term
-from llm import query_llm
+from llm import query_llm, command_adapter, MessageCommand
 from openrouter import OpenRouter
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import dotenv
 import os
-import json
 
 
 app = Flask(__name__)
@@ -31,48 +29,28 @@ def update_context(context: list, prompt: str):
             "content": response
         })
 
-        command = json.loads(response)
-
-        if command["command"] == "message":
-
-            return context
-
-        elif command["command"] == "list_sections":
-            term = {
-                "spring": Term.SPRING,
-                "summer": Term.SUMMER,
-                "fall": Term.FALL
-            }[command["term"]]
-
-            try:
-                sections, failed = fetch_sections(command["year"], term, command["subject"].upper(), command["course_num"])
-
-                output = ""
-                for section in sections:
-                    output += f"Title: {section.title}\n"
-                    output += f"Time: {section.start_time.strftime('%I:%M %p')} - {section.end_time.strftime('%I:%M %p')}\n"
-                    output += f"Days: {', '.join(section.days)}\n"
-                    output += f"Building: {section.building}\n"
-                    output += f"Room: {section.room}\n"
-                    output += f"Instructor: {section.instructor}\n\n"
-
-                output += f"Failed to parse {failed} sections"
-
-                context.append({
-                    "role": "user",
-                    "content": f"[OUTPUT]\n{output}"
-                })
-
-            except Exception as ex:
-                context.append({
-                    "role": "user",
-                    "content": f"[ERROR] {ex}"
-                })
-            
-        else:
+        try:
+            command = command_adapter.validate_json(response)
+        except Exception as ex:
             context.append({
                 "role": "user",
-                "content": f"[ERROR] invalid command"
+                "content": f"[ERROR] invalid command: {ex}"
+            })
+            continue
+
+        if isinstance(command, MessageCommand):
+            return context
+
+        try:
+            output = command.run()
+            context.append({
+                "role": "user",
+                "content": f"[OUTPUT]\n{output}"
+            })
+        except Exception as ex:
+            context.append({
+                "role": "user",
+                "content": f"[ERROR] {ex}"
             })
 
 @app.post("/initial_msg")
@@ -82,13 +60,13 @@ def initial_msg():
             "role": "system",
             "content": file.read()
         }]
-    
+
     update_context(context, request.json["msg"])
 
     return jsonify({
         "context": context
     })
-    
+
 @app.post("/msg")
 def msg():
     context = request.json["context"]

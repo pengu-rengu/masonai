@@ -16,11 +16,12 @@ import {
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import GroupIcon from "@mui/icons-material/Group";
 import SendIcon from "@mui/icons-material/Send";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface Message {
+  key?: number;
   role: string;
   content: string;
 }
@@ -203,6 +204,57 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [model, setModel] = useState<string>("Claude");
   const [selectedChat, setSelectedChat] = useState<number>(0);
+  const chatListRef = useRef<HTMLUListElement | null>(null);
+
+  const contextWithLatest = [...context];
+  if (input.trim() && loading) {
+    contextWithLatest.push({
+      role: "user",
+      content: `[USER] ${input}`
+    });
+  }
+
+  const messagesToDisplay: Message[] = [];
+  for (let i = 0; i < contextWithLatest.length; i++) {
+    const message = contextWithLatest[i];
+    let text = "";
+
+    if (message.role === "system") {
+      continue;
+    }
+
+    if (message.role === "assistant") {
+      const command = JSON.parse(message.content);
+      if (command["command"] !== "message") {
+        continue;
+      }
+
+      text = command["contents"];
+
+    } else {
+      const msgSplit = message.content.split(" ");
+      if (msgSplit[0] !== "[USER]") {
+        continue;
+      }
+
+      text = msgSplit.slice(1).join(" ");
+    }
+
+    messagesToDisplay.push({
+      key: i,
+      role: message.role,
+      content: text
+    });
+  }
+
+  useLayoutEffect(() => {
+    const chatListElement = chatListRef.current;
+    if (!chatListElement) {
+      return;
+    }
+
+    chatListElement.scrollTop = chatListElement.scrollHeight;
+  }, [messagesToDisplay.length]);
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -246,61 +298,26 @@ export default function Home() {
           model={model}
           onModelChange={setModel}
         />
-        <List sx={{
-          px: 2,
-          overflowY: "auto",
-          flexGrow: 1,
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          "&::-webkit-scrollbar": {
-            display: "none"
-          }
-        }}>
-          {(() => {
-            const items: React.ReactNode[] = [];
-
-            const contextToDisplay = [...context];
-            if (input.trim() && loading) {
-              contextToDisplay.push({
-                "role": "user",
-                "content": `[USER] ${input}`
-              });
+        <List
+          ref={chatListRef}
+          sx={{
+            px: 2,
+            overflowY: "auto",
+            flexGrow: 1,
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            "&::-webkit-scrollbar": {
+              display: "none"
             }
-
-            for (let i = 0; i < contextToDisplay.length; i++) {
-              const message = contextToDisplay[i];
-              let text = "";
-              if (message.role === "system") {
-                continue;
-
-              } else if (message.role === "assistant") {
-                const command = JSON.parse(message.content);
-                if (command["command"] === "message") {
-                  text = command["contents"];
-                } else {
-                  continue;
-                }
-
-              } else {
-                const msgSplit = message.content.split(" ");
-                if (msgSplit[0] === "[USER]") {
-                  text = msgSplit.slice(1).join(" ");
-                } else {
-                  continue;
-                }
-              }
-
-              items.push(
-                <MessageItem
-                  key={i}
-                  role={message.role}
-                  text={text}
-                />
-              );
-            }
-
-            return items;
-          })()}
+          }}
+        >
+          {messagesToDisplay.map((message) => (
+            <MessageItem
+              key={message.key}
+              role={message.role}
+              text={message.content}
+            />
+          ))}
         </List>
         <ChatInput
           input={input}
