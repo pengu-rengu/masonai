@@ -13,15 +13,17 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import GroupIcon from "@mui/icons-material/Group";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import SendIcon from "@mui/icons-material/Send";
 import { useColorScheme } from "@mui/material/styles";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { supabase } from "@/lib/supabase";
 
 interface Message {
   key?: number;
@@ -29,29 +31,28 @@ interface Message {
   content: string;
 }
 
+interface Chat {
+  id: number;
+  title: string;
+  context: Message[];
+}
+
 const MODELS = ["Claude", "Gemini", "GPT"];
 const TOP_BAR_CONTROL_WIDTH = 120;
+const NEW_CHAT_TITLE = "New Chat";
 
-const PLACEHOLDER_CHATS = [
-  "CS 101 Homework Help",
-  "Library Hours",
-  "Campus Parking Info",
-  "Financial Aid Questions",
-  "MATH 214 Study Group",
-  "Dorm Move-In Info",
-  "Career Fair Prep",
-  "ENGR 107 Lab Report",
-  "Shuttle Schedule",
-  "Club Registration",
-  "Advising Appointment",
-  "PSYC 100 Essay Draft",
-  "Meal Plan Options",
-  "Gym Hours",
-  "Graduation Requirements",
-  "Research Assistant Role",
-  "PHYS 160 Exam Review",
-  "Transfer Credits"
-];
+function getNextChatTitle(chats: Chat[]) {
+  const titles = chats.map((chat) => chat.title);
+  let title = NEW_CHAT_TITLE;
+  let number = 2;
+
+  while (titles.includes(title)) {
+    title = `${NEW_CHAT_TITLE} ${number}`;
+    number += 1;
+  }
+
+  return title;
+}
 
 function ThemeToggleButton() {
   const { mode, setMode, systemMode } = useColorScheme();
@@ -107,14 +108,15 @@ function TopBar({ title, model, onModelChange }: {
   );
 }
 
-function Sidebar({ chats, selected, onSelect }: {
-  chats: string[];
+function Sidebar({ chats, selected, onSelect, onAddChat }: {
+  chats: Chat[];
   selected: number;
   onSelect: (index: number) => void;
+  onAddChat: () => void;
 }) {
   return (
     <Box sx={{
-      width: 260,
+      width: 300,
       borderRight: 1,
       borderColor: "divider",
       py: 2,
@@ -140,15 +142,25 @@ function Sidebar({ chats, selected, onSelect }: {
           Social
         </Button>
       </Stack>
-      <Typography variant="h6" sx={{ px: 2, pb: 2 }}>Chats</Typography>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 2, pb: 1 }}
+      >
+        <Typography variant="h6">Chats</Typography>
+        <IconButton aria-label="Add new chat" size="small" onClick={onAddChat}>
+          <AddIcon />
+        </IconButton>
+      </Stack>
       <List disablePadding>
         {chats.map((chat, i) => (
           <ListItemButton
-            key={i}
+            key={chat.id}
             selected={i === selected}
             onClick={() => onSelect(i)}
           >
-            <ListItemText primary={chat} />
+            <ListItemText primary={chat.title} />
           </ListItemButton>
         ))}
       </List>
@@ -228,14 +240,35 @@ function MessageItem({ role, text }: {
 }
 
 export default function Home() {
-  const [context, setContext] = useState<Message[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [model, setModel] = useState<string>("Claude");
   const [selectedChat, setSelectedChat] = useState<number>(0);
   const chatListRef = useRef<HTMLUListElement | null>(null);
+  const currentChat = chats[selectedChat];
+  const selectedChatTitle = currentChat?.title ?? "";
 
-  const contextWithLatest = [...context];
+  useEffect(() => {
+    async function loadChats() {
+      const { data, error } = await supabase
+        .from("chats")
+        .select("id, title, context")
+        .order("last_edited", { ascending: false });
+
+      if (error) {
+        alert("Failed to load chats:" + error.message);
+        return;
+      }
+
+      setChats(data as Chat[]);
+      setSelectedChat(0);
+    }
+
+    loadChats();
+  }, []);
+
+  const contextWithLatest: Message[] = currentChat ? [...currentChat.context] : [];
   if (input.trim() && loading) {
     contextWithLatest.push({
       role: "user",
@@ -285,25 +318,79 @@ export default function Home() {
     chatListElement.scrollTop = chatListElement.scrollHeight;
   }, [messagesToDisplay.length]);
 
+  async function addChat() {
+    const title = getNextChatTitle(chats);
+    const { data, error } = await supabase
+      .from("chats")
+      .insert({ title, context: [], last_edited: new Date().toISOString() })
+      .select("id, title, context")
+      .single();
+
+    if (error || !data) {
+      console.error("Failed to create chat:", error);
+      return;
+    }
+
+    setChats([data as Chat, ...chats]);
+    setSelectedChat(0);
+  }
+
   async function sendMessage() {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !currentChat) return;
 
     setLoading(true);
 
     try {
-      const isFirst = context.length === 0;
+      const isFirst = currentChat.context.length === 0;
       const response = await fetch(`http://localhost:5001${isFirst ? "/initial_msg" : "/msg"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isFirst ? {
           msg: input
         } : {
-          context: context,
+          context: currentChat.context,
           msg: input
         })
       });
       const data = await response.json();
-      setContext(data.context);
+      const newContext: Message[] = data.context;
+
+      let newTitle: string | null = null;
+      if (isFirst) {
+        try {
+          const titleResponse = await fetch("http://localhost:5001/title", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ msg: input })
+          });
+          newTitle = (await titleResponse.json()).title;
+        } catch (error) {
+          alert(`Failed to generate chat title: ${error}`);
+        }
+      }
+
+      setChats((prev) => prev.map((chat) => (
+        chat.id === currentChat.id
+          ? { ...chat, context: newContext, title: newTitle ?? chat.title }
+          : chat
+      )));
+
+      const update: { context: Message[]; last_edited: string; title?: string } = {
+        context: newContext,
+        last_edited: new Date().toISOString()
+      };
+      if (newTitle) {
+        update.title = newTitle;
+      }
+
+      const { error } = await supabase
+        .from("chats")
+        .update(update)
+        .eq("id", currentChat.id);
+
+      if (error) {
+        alert("Failed to persist chat context: " + error.message);
+      }
 
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -317,13 +404,14 @@ export default function Home() {
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>
       <Sidebar
-        chats={PLACEHOLDER_CHATS}
+        chats={chats}
         selected={selectedChat}
         onSelect={setSelectedChat}
+        onAddChat={addChat}
       />
       <Stack spacing={2} sx={{ flexGrow: 1, pt: 2, pb: 2 }}>
         <TopBar
-          title={PLACEHOLDER_CHATS[selectedChat]}
+          title={selectedChatTitle}
           model={model}
           onModelChange={setModel}
         />

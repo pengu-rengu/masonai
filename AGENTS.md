@@ -15,3 +15,11 @@ This project is an AI chatbot designed to assist students and faculty at George 
 - In general, functions or classes/structs that depend on others should be placed lower in the file, than those do not. The exception is for circular dependencies
 - Spaghetti code is a death sentence. Always default to the simplest, most elegant implementation. Make assumptions as necessary, but be sure to mention them.
 - Prefer minimal UI components. Don't do any fancy styling unless explicitly asked to
+
+## Supabase Tables
+Table: `chats`
+Fields:
+`id`: int8
+`last_edited`: timestampz
+`title`: text
+`context`: jsonb
