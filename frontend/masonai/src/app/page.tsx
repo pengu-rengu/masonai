@@ -7,6 +7,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Menu,
   MenuItem,
   Select,
   Stack,
@@ -18,25 +19,22 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import GroupIcon from "@mui/icons-material/Group";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SendIcon from "@mui/icons-material/Send";
 import { useColorScheme } from "@mui/material/styles";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { supabase } from "@/lib/supabase";
-
-interface Message {
-  key?: number;
-  role: string;
-  content: string;
-}
-
-interface Chat {
-  id: number;
-  title: string;
-  context: Message[];
-}
+import {
+  createChat,
+  deleteChat,
+  fetchChats,
+  renameChat,
+  updateChatContext,
+  type Chat,
+  type Message
+} from "@/lib/chats";
 
 const MODELS = ["Claude", "Gemini", "GPT"];
 const TOP_BAR_CONTROL_WIDTH = 120;
@@ -111,12 +109,22 @@ function TopBar({ title, model, onModelChange }: {
   );
 }
 
-function Sidebar({ chats, selected, onSelect, onAddChat }: {
+function Sidebar({ chats, selected, onSelect, onAddChat, onRenameChat, onDeleteChat }: {
   chats: Chat[];
   selected: number;
   onSelect: (index: number) => void;
   onAddChat: () => void;
+  onRenameChat: (chatId: number) => void;
+  onDeleteChat: (chatId: number) => void;
 }) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [menuChatId, setMenuChatId] = useState<number | null>(null);
+
+  function closeMenu() {
+    setMenuAnchor(null);
+    setMenuChatId(null);
+  }
+
   return (
     <Box sx={{
       width: 300,
@@ -161,15 +169,40 @@ function Sidebar({ chats, selected, onSelect, onAddChat }: {
       </Stack>
       <List disablePadding>
         {chats.map((chat, i) => (
-          <ListItemButton
+          <ListItem
             key={chat.id}
-            selected={i === selected}
-            onClick={() => onSelect(i)}
+            disablePadding
+            secondaryAction={
+              <IconButton
+                edge="end"
+                size="small"
+                aria-label="Chat actions"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuAnchor(event.currentTarget);
+                  setMenuChatId(chat.id);
+                }}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+            }
           >
-            <ListItemText primary={chat.title} />
-          </ListItemButton>
+            <ListItemButton selected={i === selected} onClick={() => onSelect(i)}>
+              <ListItemText primary={chat.title} />
+            </ListItemButton>
+          </ListItem>
         ))}
       </List>
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+        <MenuItem onClick={() => {
+          if (menuChatId !== null) onRenameChat(menuChatId);
+          closeMenu();
+        }}>Edit title</MenuItem>
+        <MenuItem onClick={() => {
+          if (menuChatId !== null) onDeleteChat(menuChatId);
+          closeMenu();
+        }}>Delete</MenuItem>
+      </Menu>
     </Box>
   );
 }
@@ -257,17 +290,8 @@ export default function Home() {
 
   useEffect(() => {
     async function loadChats() {
-      const { data, error } = await supabase
-        .from("chats")
-        .select("id, title, context")
-        .order("last_edited", { ascending: false });
-
-      if (error) {
-        alert("Failed to load chats: " + error.message);
-        return;
-      }
-
-      setChats(data as Chat[]);
+      const loaded = await fetchChats();
+      setChats(loaded);
       setSelectedChat(0);
     }
 
@@ -324,21 +348,45 @@ export default function Home() {
     chatListElement.scrollTop = chatListElement.scrollHeight;
   }, [messagesToDisplay.length]);
 
-  async function addChat() {
+  async function handleAddChat() {
     const title = getNextChatTitle(chats);
-    const { data, error } = await supabase
-      .from("chats")
-      .insert({ title, context: [], last_edited: new Date().toISOString() })
-      .select("id, title, context")
-      .single();
+    const created = await createChat(title);
+    if (!created) return;
+    setChats([created, ...chats]);
+    setSelectedChat(0);
+  }
 
-    if (error || !data) {
-      console.error("Failed to create chat:", error);
-      return;
+  async function handleRenameChat(chatId: number) {
+    const chat = chats.find((each) => each.id === chatId);
+    if (!chat) return;
+    const next = window.prompt("Chat title", chat.title);
+    if (next === null) return;
+    const title = next.trim();
+    if (!title || title === chat.title) return;
+
+    setChats((prev) => prev.map((each) => (
+      each.id === chatId ? { ...each, title } : each
+    )));
+
+    await renameChat(chatId, title);
+  }
+
+  async function handleDeleteChat(chatId: number) {
+    if (!window.confirm("Delete this chat?")) return;
+
+    const index = chats.findIndex((each) => each.id === chatId);
+    if (index === -1) return;
+    const nextChats = chats.filter((each) => each.id !== chatId);
+    setChats(nextChats);
+    if (nextChats.length === 0) {
+      setSelectedChat(0);
+    } else if (index < selectedChat) {
+      setSelectedChat(selectedChat - 1);
+    } else if (index === selectedChat) {
+      setSelectedChat(Math.min(selectedChat, nextChats.length - 1));
     }
 
-    setChats([data as Chat, ...chats]);
-    setSelectedChat(0);
+    await deleteChat(chatId);
   }
 
   async function sendMessage() {
@@ -381,22 +429,7 @@ export default function Home() {
           : chat
       )));
 
-      const update: { context: Message[]; last_edited: string; title?: string } = {
-        context: newContext,
-        last_edited: new Date().toISOString()
-      };
-      if (newTitle) {
-        update.title = newTitle;
-      }
-
-      const { error } = await supabase
-        .from("chats")
-        .update(update)
-        .eq("id", currentChat.id);
-
-      if (error) {
-        alert("Failed to persist chat context: " + error.message);
-      }
+      await updateChatContext(currentChat.id, newContext, newTitle ?? undefined);
 
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -413,7 +446,9 @@ export default function Home() {
         chats={chats}
         selected={selectedChat}
         onSelect={setSelectedChat}
-        onAddChat={addChat}
+        onAddChat={handleAddChat}
+        onRenameChat={handleRenameChat}
+        onDeleteChat={handleDeleteChat}
       />
       <Stack spacing={2} sx={{ flexGrow: 1, pt: 2, pb: 2 }}>
         <TopBar

@@ -83,7 +83,7 @@ export default function SectionSearch({ onAdd }: { onAdd: (section: ClassSection
   }
 
   return (
-    <Stack spacing={2} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 2 }}>
+    <Stack spacing={2}>
       <Typography variant="subtitle1">Add section</Typography>
       <Stack direction="row" spacing={2} alignItems="center">
         <TextField

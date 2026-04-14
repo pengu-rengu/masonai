@@ -1,5 +1,6 @@
 "use client";
 import {
+  Divider,
   IconButton,
   List,
   ListItem,
@@ -136,6 +137,7 @@ export default function SchedulesPage() {
       {activeSchedule ? (
         <Stack spacing={3}>
           <Schedule schedule={activeSchedule} />
+          <Divider />
           <SectionList
             sections={activeSchedule.sections}
             actionIcon={<DeleteIcon />}
