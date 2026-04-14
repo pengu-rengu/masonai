@@ -19,7 +19,42 @@ This project is an AI chatbot designed to assist students and faculty at George 
 ## Supabase Tables
 Table: `chats`
 Fields:
-`id`: int8
-`last_edited`: timestampz
+`id`: int8 (identity, primary)
+`last_edited`: timestamptz
 `title`: text
 `context`: jsonb
+
+Table: `schedules`
+Fields:
+`id`: int8 (identity, primary)
+`last_edited`: timestamptz
+`title`: text
+`sections`: jsonb
+
+Table: `subjects`
+Fields:
+`id`: int8 (identity, primary)
+`subject`: text
+`full_name`: text
+
+Table: `courses`
+Fields:
+`id`: int8 (identity, primary)
+`subject`: text
+`course_num`: int2
+`description`: text
+`additional_info`: text
+
+Table: `class_sections`
+`id`: int8 (identity, primary)
+`subject`: text
+`course_num`: int2
+`title`: text
+`term`: text
+`year`: int2
+`start_time`: timetz
+`end_time`: timetz
+`days`: text
+`building`: text
+`room`: text
+`instructor`: text

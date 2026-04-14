@@ -96,7 +96,9 @@ function TopBar({ title, model, onModelChange }: {
         sx={{ width: TOP_BAR_CONTROL_WIDTH }}
       >
         {MODELS.map((name) => (
-          <MenuItem key={name} value={name}>{name}</MenuItem>
+          <MenuItem key={name} value={name}>
+            <Typography>{name}</Typography>
+          </MenuItem>
         ))}
       </Select>
       <Typography variant="h6" sx={{ flexGrow: 1, textAlign: "center" }}>
@@ -135,7 +137,7 @@ function Sidebar({ chats, selected, onSelect, onAddChat }: {
             fullWidth
             sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
           >
-            Schedule
+            <Typography>Schedule</Typography>
           </Button>
         </Link>
         <Button
@@ -143,7 +145,7 @@ function Sidebar({ chats, selected, onSelect, onAddChat }: {
           startIcon={<GroupIcon />}
           sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
         >
-          Social
+          <Typography>Social</Typography>
         </Button>
       </Stack>
       <Stack

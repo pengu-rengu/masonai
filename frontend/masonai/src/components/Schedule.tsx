@@ -1,6 +1,6 @@
 "use client";
 import { Box, Stack, Typography } from "@mui/material";
-import type { ClassSection, Schedule as ScheduleType } from "@/lib/mockSchedules";
+import { formatTime, type ClassSection, type Schedule as ScheduleType } from "@/lib/schedules";
 
 const DAYS = [
   { code: "M", label: "Monday" },
@@ -9,14 +9,6 @@ const DAYS = [
   { code: "R", label: "Thursday" },
   { code: "F", label: "Friday" }
 ];
-
-function formatTime(time: string) {
-  const [hourStr, minute] = time.split(":");
-  const hour = Number(hourStr);
-  const period = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute} ${period}`;
-}
 
 function SectionCard({ section }: { section: ClassSection }) {
   return (
