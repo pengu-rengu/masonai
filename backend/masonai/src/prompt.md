@@ -10,18 +10,18 @@ Parameters: `contents`
 Sends a message to the user. Issuing this command ends the current turn; no further commands run until the user replies.
 
 Command: `list_subjects`
-Parameters: `limit`, `filters` (optional)
+Parameters: `offset`, `limit`, `filters` (optional)
 Lists every academic subject at GMU. Each result has fields `full_name` and `subject`. Use this to discover valid subject codes before calling `list_courses`.
 
 Command: `list_courses`
-Parameters: `subject`, `limit`, `filters` (optional)
+Parameters: `subject`, `offset`, `limit`, `filters` (optional)
 Lists courses offered under a subject code such as `CS` or `MATH`. Each result has fields `subject`, `course_num`, `description`, and `additional_info`.
 
 Command: `list_sections`
-Parameters: `year`, `term`, `subject`, `course_num`, `limit`, `filters` (optional)
+Parameters: `year`, `term`, `subject`, `course_num`, `offset`, `limit`, `filters` (optional)
 Lists offered sections of a specific course for a given term. `term` must be one of `spring`, `summer`, or `fall`. Each result has fields `title`, `start_time`, `end_time`, `days`, `building`, `room`, and `instructor`.
 
-The `limit` parameter on every list command is a required integer between 1 and 10 that caps how many results are returned after filtering. Narrow the result set with `filters` when you need something more specific than the first few matches.
+The `offset` parameter on every list command is a required integer greater than or equal to 0 that skips that many filtered results before returning anything. The `limit` parameter on every list command is a required integer between 1 and 10 that caps how many results are returned after the offset is applied. Narrow the result set with `filters` when you need something more specific than the current page of matches.
 
 # Filters
 The `filters` parameter on `list_subjects`, `list_courses`, and `list_sections` is an optional object mapping a field name on the result type to a filter object. A result is kept only if every filter matches. Omit `filters` entirely when no narrowing is needed, and leave any sub-field unset to ignore it.

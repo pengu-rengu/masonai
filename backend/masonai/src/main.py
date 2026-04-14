@@ -57,6 +57,7 @@ def update_context(context: list, prompt: str):
     while True:
 
         response = query_llm(open_router, "deepseek/deepseek-v3.2", context)
+        print(response)
         context.append({
             "role": "assistant",
             "content": response

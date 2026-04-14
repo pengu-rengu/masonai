@@ -21,6 +21,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import SendIcon from "@mui/icons-material/Send";
 import { useColorScheme } from "@mui/material/styles";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/lib/supabase";
@@ -127,13 +128,16 @@ function Sidebar({ chats, selected, onSelect, onAddChat }: {
       "&::-webkit-scrollbar": { display: "none" }
     }}>
       <Stack spacing={0} sx={{ px: 1, pb: 1 }}>
-        <Button
-          variant="text"
-          startIcon={<CalendarMonthIcon />}
-          sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
-        >
-          Schedule
-        </Button>
+        <Link href="/schedules" style={{ textDecoration: "none" }}>
+          <Button
+            variant="text"
+            startIcon={<CalendarMonthIcon />}
+            fullWidth
+            sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
+          >
+            Schedule
+          </Button>
+        </Link>
         <Button
           variant="text"
           startIcon={<GroupIcon />}
@@ -257,7 +261,7 @@ export default function Home() {
         .order("last_edited", { ascending: false });
 
       if (error) {
-        alert("Failed to load chats:" + error.message);
+        alert("Failed to load chats: " + error.message);
         return;
       }
 
