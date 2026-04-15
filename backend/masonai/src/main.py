@@ -2,6 +2,7 @@ from llm import query_llm, command_adapter, MessageCommand
 from openrouter import OpenRouter
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from fetch import Term, fetch_courses, fetch_sections, fetch_subjects
 import dotenv
 import json
 import os
@@ -135,6 +136,26 @@ def title():
         request.json["model"]
     )
     return jsonify({"title": chat_title})
+
+
+@app.get("/subjects")
+def subjects():
+    return jsonify([subject.model_dump() for subject in fetch_subjects()])
+
+@app.get("/courses/<subject>")
+def courses(subject: str):
+    course_list, _failed = fetch_courses(subject.upper())
+    return jsonify([course.model_dump() for course in course_list])
+
+@app.get("/sections/<int:year>/<term>/<subject>/<int:course_num>")
+def sections(year: int, term: str, subject: str, course_num: int):
+    try:
+        term_enum = Term[term.upper()]
+    except KeyError:
+        return jsonify({"error": f"unknown term: {term}"}), 400
+
+    section_list, _failed = fetch_sections(year, term_enum, subject.upper(), course_num)
+    return jsonify([section.model_dump() for section in section_list])
 
 if __name__ == "__main__":
     app.run(debug = True, port = 5001)

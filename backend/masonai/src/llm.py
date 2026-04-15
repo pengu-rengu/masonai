@@ -1,61 +1,25 @@
-import json
 from typing import Annotated, Literal
 
 from openrouter import OpenRouter
 from openrouter.components import MessageTypedDict
 from pydantic import BaseModel, Field, TypeAdapter
 
-from fetch import ClassSection, Course, Subject, get_supabase_client
+from fetch import ClassSection, Course, Subject, Term, fetch_courses, fetch_sections, fetch_subjects
 from filter import Filter, filter_models
 
 
-def validate_rows[ModelType: BaseModel](rows: list[dict], model_type: type[ModelType]) -> list[ModelType]:
-    models = []
-    for row in rows:
-        model = model_type.model_validate_json(json.dumps(row))
-        models.append(model)
-    return models
-
-
 def query_subjects() -> list[Subject]:
-    response = (
-        get_supabase_client()
-        .table("subjects")
-        .select("subject, full_name")
-        .order("subject")
-        .execute()
-    )
-
-    return validate_rows(response.data or [], Subject)
+    return fetch_subjects()
 
 
 def query_courses(subject: str) -> list[Course]:
-    response = (
-        get_supabase_client()
-        .table("courses")
-        .select("subject, course_num, description, additional_info")
-        .eq("subject", subject.upper())
-        .order("course_num")
-        .execute()
-    )
-
-    return validate_rows(response.data or [], Course)
+    courses, _failed = fetch_courses(subject.upper())
+    return courses
 
 
 def query_sections(year: int, term: str, subject: str, course_num: int) -> list[ClassSection]:
-    response = (
-        get_supabase_client()
-        .table("class_sections")
-        .select("title, subject, course_num, term, year, start_time, end_time, days, building, room, instructor")
-        .eq("year", year)
-        .eq("term", term)
-        .eq("subject", subject.upper())
-        .eq("course_num", course_num)
-        .order("title")
-        .execute()
-    )
-
-    return validate_rows(response.data or [], ClassSection)
+    sections, _failed = fetch_sections(year, Term[term.upper()], subject.upper(), course_num)
+    return sections
 
 
 def format_models(models: list[BaseModel]) -> str:
@@ -70,7 +34,6 @@ def filter_and_slice(models: list[BaseModel], filters: dict[str, Filter], offset
     filtered_models = filter_models(models, filters)
     return filtered_models[offset:offset + limit]
 
-
 class MessageCommand(BaseModel):
     command: Literal["message"]
     contents: str
@@ -78,12 +41,11 @@ class MessageCommand(BaseModel):
     def run(self) -> str:
         return self.contents
 
-
 class ListSubjectsCommand(BaseModel):
     command: Literal["list_subjects"]
     filters: dict[str, Filter] = Field(default_factory=dict)
-    offset: int = Field(ge=0)
-    limit: int = Field(ge=1, le=10)
+    offset: int = Field(ge = 0)
+    limit: int = Field(ge = 1, le = 10)
 
     def run(self) -> str:
         subjects = filter_and_slice(query_subjects(), self.filters, self.offset, self.limit)

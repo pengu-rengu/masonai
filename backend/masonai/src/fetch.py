@@ -1,14 +1,10 @@
-import os
 import re
-from datetime import date, datetime, time
+from datetime import datetime
 from enum import Enum
-from typing import Annotated
 
-import dotenv
 import requests
 from bs4 import BeautifulSoup
-from pydantic import BaseModel, BeforeValidator
-from supabase import Client, create_client
+from pydantic import BaseModel
 
 
 class Term(Enum):
@@ -25,18 +21,10 @@ def get_courses_url(subject: str) -> str:
     return f"https://catalog.gmu.edu/courses/{subject.lower()}/"
 
 
-def parse_supabase_time(value: str) -> datetime:
-    parsed_time = time.fromisoformat(value).replace(tzinfo = None)
-    return datetime.combine(date.min, parsed_time)
-
-
-def parse_supabase_days(value: str) -> list[str]:
-    return list(value)
-
-
 class Subject(BaseModel):
     full_name: str
     subject: str
+
 
 class Course(BaseModel):
     subject: str
@@ -51,12 +39,13 @@ class ClassSection(BaseModel):
     course_num: int
     term: str
     year: int
-    start_time: Annotated[datetime, BeforeValidator(parse_supabase_time)]
-    end_time: Annotated[datetime, BeforeValidator(parse_supabase_time)]
-    days: Annotated[list[str], BeforeValidator(parse_supabase_days)]
+    start_time: str
+    end_time: str
+    days: str
     building: str
     room: str
     instructor: str
+
 
 def fetch_subjects() -> list[Subject]:
     response = requests.get("https://catalog.gmu.edu/courses/")
@@ -141,8 +130,8 @@ def fetch_sections(year: int, term: Term, subject: str, course_num: int) -> tupl
             time_strs = info_cells[1].text.split("-")
             loc_strs = info_cells[3].text.split()
 
-            start_time = format_time(datetime.strptime(time_strs[0].strip(), "%I:%M %p"))
-            end_time = format_time(datetime.strptime(time_strs[1].strip(), "%I:%M %p"))
+            start_time = datetime.strptime(time_strs[0].strip(), "%I:%M %p").strftime("%H:%M")
+            end_time = datetime.strptime(time_strs[1].strip(), "%I:%M %p").strftime("%H:%M")
             days = info_cells[2].text
             building = " ".join(loc_strs[:-1])
             instructor = " ".join(info_cells[-1].text.split()[:-1])
@@ -165,85 +154,3 @@ def fetch_sections(year: int, term: Term, subject: str, course_num: int) -> tupl
             failed += 1
 
     return sections, failed
-
-
-def get_supabase_client() -> Client:
-    dotenv.load_dotenv()
-
-    supabase_url = os.environ.get("SUPABASE_URL")
-    anon_key = os.environ.get("SUPABASE_ANON_KEY")
-
-    return create_client(supabase_url, anon_key)
-
-
-def clear_table(supabase: Client, table_name: str) -> None:
-    supabase.table(table_name).delete().gte("id", 0).execute()
-
-
-def format_time(value: datetime) -> str:
-    return value.strftime("%H:%M:%S")
-
-
-def insert_subject(supabase: Client, subject: Subject) -> None:
-    supabase.table("subjects").insert({
-        "subject": subject.subject,
-        "full_name": subject.full_name
-    }).execute()
-
-
-def insert_course(supabase: Client, course: Course) -> None:
-    supabase.table("courses").insert({
-        "subject": course.subject,
-        "course_num": course.course_num,
-        "description": course.description,
-        "additional_info": course.additional_info
-    }).execute()
-
-
-def insert_section(supabase: Client, section: ClassSection) -> None:
-    supabase.table("class_sections").insert({
-        "title": section.title,
-        "subject": section.subject,
-        "course_num": section.course_num,
-        "term": section.term,
-        "year": section.year,
-        "start_time": format_time(section.start_time),
-        "end_time": format_time(section.end_time),
-        "days": "".join(section.days),
-        "building": section.building,
-        "room": section.room,
-        "instructor": section.instructor
-    }).execute()
-
-
-def fetch(year: int, term: Term):
-    supabase = get_supabase_client()
-
-    clear_table(supabase, "class_sections")
-    clear_table(supabase, "courses")
-    clear_table(supabase, "subjects")
-
-    subjects = fetch_subjects()
-
-    for subject in subjects:
-        print(subject.subject)
-        insert_subject(supabase, subject)
-
-        courses, failed_courses = fetch_courses(subject.subject)
-        if failed_courses:
-            print(f"Failed to parse {failed_courses} courses for {subject.subject}")
-
-        for course in courses:
-            print(course.subject)
-            insert_course(supabase, course)
-
-            sections, failed_sections = fetch_sections(year, term, course.subject, course.course_num)
-            if failed_sections:
-                print(f"Failed to parse {failed_sections} sections for {course.subject} {course.course_num}")
-
-            for section in sections:
-                insert_section(supabase, section)
-
-
-if __name__ == "__main__":
-    fetch(2026, Term.FALL)

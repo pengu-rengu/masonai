@@ -30,31 +30,3 @@ Fields:
 `last_edited`: timestamptz
 `title`: text
 `sections`: jsonb
-
-Table: `subjects`
-Fields:
-`id`: int8 (identity, primary)
-`subject`: text
-`full_name`: text
-
-Table: `courses`
-Fields:
-`id`: int8 (identity, primary)
-`subject`: text
-`course_num`: int2
-`description`: text
-`additional_info`: text
-
-Table: `class_sections`
-`id`: int8 (identity, primary)
-`subject`: text
-`course_num`: int2
-`title`: text
-`term`: text
-`year`: int2
-`start_time`: timetz
-`end_time`: timetz
-`days`: text
-`building`: text
-`room`: text
-`instructor`: text

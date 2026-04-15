@@ -10,9 +10,10 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import SectionList from "@/components/SectionList";
 import type { ClassSection } from "@/lib/schedules";
+
+const API_BASE = "http://localhost:5001";
 
 const TERMS = [
   { value: "fall", label: "Fall" },
@@ -37,17 +38,12 @@ export default function SectionSearch({ onAdd }: { onAdd: (section: ClassSection
 
   useEffect(() => {
     async function loadSubjects() {
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("subject, full_name")
-        .order("subject");
-
-      if (error) {
-        alert("Failed to load subjects: " + error.message);
+      const response = await fetch(`${API_BASE}/subjects`);
+      if (!response.ok) {
+        alert("Failed to load subjects");
         return;
       }
-
-      setSubjects(data as Subject[]);
+      setSubjects(await response.json() as Subject[]);
     }
 
     loadSubjects();
@@ -57,24 +53,18 @@ export default function SectionSearch({ onAdd }: { onAdd: (section: ClassSection
 
   async function runSearch() {
     if (!subject) return;
-    const { data, error } = await supabase
-      .from("class_sections")
-      .select("title, start_time, end_time, days, building, room, instructor")
-      .eq("year", year)
-      .eq("term", term)
-      .eq("subject", subject.subject)
-      .eq("course_num", Number(courseNum))
-      .order("title");
-
-    if (error) {
-      alert("Failed to load sections: " + error.message);
+    const url = `${API_BASE}/sections/${year}/${term}/${subject.subject}/${Number(courseNum)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      alert("Failed to load sections");
       return;
     }
 
-    setSections((data ?? []).map((row) => ({
+    const rows = await response.json();
+    setSections(rows.map((row: Record<string, string>) => ({
       title: row.title,
-      startTime: row.start_time.slice(0, 5),
-      endTime: row.end_time.slice(0, 5),
+      startTime: row.start_time,
+      endTime: row.end_time,
       days: row.days,
       building: row.building,
       room: row.room,
