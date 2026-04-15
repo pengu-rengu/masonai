@@ -6,7 +6,13 @@ import dotenv
 import json
 import os
 
-TITLE_MODEL = "deepseek/deepseek-v3.2"
+MAX_LLM_RETRIES = 5
+
+
+class LLMRetryExhausted(Exception):
+    pass
+
+
 TITLE_SYSTEM_PROMPT = (
     "You generate concise chat titles. Given the user's first message in a new chat, "
     "respond with a 2 to 5 word title describing the topic. No punctuation, no quotes."
@@ -27,9 +33,9 @@ def build_open_router() -> OpenRouter:
     return OpenRouter(api_key=os.environ["OPENROUTER_KEY"])
 
 
-def generate_title(open_router: OpenRouter, msg: str) -> str:
+def generate_title(open_router: OpenRouter, msg: str, model: str) -> str:
     response = open_router.chat.send(
-        model=TITLE_MODEL,
+        model=model,
         messages=[
             {"role": "system", "content": TITLE_SYSTEM_PROMPT},
             {"role": "user", "content": msg}
@@ -45,7 +51,7 @@ def generate_title(open_router: OpenRouter, msg: str) -> str:
 app = Flask(__name__)
 CORS(app)
 
-def update_context(context: list, prompt: str):
+def update_context(context: list, prompt: str, model: str):
 
     open_router = build_open_router()
 
@@ -54,9 +60,9 @@ def update_context(context: list, prompt: str):
         "content": f"[USER] {prompt}"
     })
 
-    while True:
+    for _attempt in range(MAX_LLM_RETRIES):
 
-        response = query_llm(open_router, "deepseek/deepseek-v3.2", context)
+        response = query_llm(open_router, model, context)
         print(response)
         context.append({
             "role": "assistant",
@@ -87,6 +93,10 @@ def update_context(context: list, prompt: str):
                 "content": f"[ERROR] {ex}"
             })
 
+    raise LLMRetryExhausted(
+        f"LLM failed to produce a valid command after {MAX_LLM_RETRIES} attempts"
+    )
+
 @app.post("/initial_msg")
 def initial_msg():
     with open("src/prompt.md", "r") as file:
@@ -95,7 +105,10 @@ def initial_msg():
             "content": file.read()
         }]
 
-    update_context(context, request.json["msg"])
+    try:
+        update_context(context, request.json["msg"], request.json["model"])
+    except LLMRetryExhausted as ex:
+        return jsonify({"error": str(ex)}), 503
 
     return jsonify({
         "context": context
@@ -105,7 +118,10 @@ def initial_msg():
 def msg():
     context = request.json["context"]
 
-    update_context(context, request.json["msg"])
+    try:
+        update_context(context, request.json["msg"], request.json["model"])
+    except LLMRetryExhausted as ex:
+        return jsonify({"error": str(ex)}), 503
 
     return jsonify({
         "context": context
@@ -113,8 +129,11 @@ def msg():
 
 @app.post("/title")
 def title():
-    msg = request.json["msg"]
-    chat_title = generate_title(build_open_router(), msg)
+    chat_title = generate_title(
+        build_open_router(),
+        request.json["msg"],
+        request.json["model"]
+    )
     return jsonify({"title": chat_title})
 
 if __name__ == "__main__":

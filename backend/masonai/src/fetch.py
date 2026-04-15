@@ -1,11 +1,13 @@
 import os
 import re
+from datetime import date, datetime, time
+from enum import Enum
+from typing import Annotated
+
 import dotenv
 import requests
 from bs4 import BeautifulSoup
-from enum import Enum
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, BeforeValidator
 from supabase import Client, create_client
 
 
@@ -21,6 +23,15 @@ def get_sections_url(year: int, term: Term, subject: str, course_num: int) -> st
 
 def get_courses_url(subject: str) -> str:
     return f"https://catalog.gmu.edu/courses/{subject.lower()}/"
+
+
+def parse_supabase_time(value: str) -> datetime:
+    parsed_time = time.fromisoformat(value).replace(tzinfo = None)
+    return datetime.combine(date.min, parsed_time)
+
+
+def parse_supabase_days(value: str) -> list[str]:
+    return list(value)
 
 
 class Subject(BaseModel):
@@ -40,9 +51,9 @@ class ClassSection(BaseModel):
     course_num: int
     term: str
     year: int
-    start_time: datetime
-    end_time: datetime
-    days: list[str]
+    start_time: Annotated[datetime, BeforeValidator(parse_supabase_time)]
+    end_time: Annotated[datetime, BeforeValidator(parse_supabase_time)]
+    days: Annotated[list[str], BeforeValidator(parse_supabase_days)]
     building: str
     room: str
     instructor: str
@@ -97,7 +108,7 @@ def fetch_courses(subject: str) -> tuple[list[Course], int]:
                 subject = subject,
                 course_num = course_num,
                 description = description,
-                additional_info = additional_info,
+                additional_info = additional_info
             )
             courses.append(course)
         except:
@@ -130,9 +141,9 @@ def fetch_sections(year: int, term: Term, subject: str, course_num: int) -> tupl
             time_strs = info_cells[1].text.split("-")
             loc_strs = info_cells[3].text.split()
 
-            start_time = datetime.strptime(time_strs[0].strip(), "%I:%M %p")
-            end_time = datetime.strptime(time_strs[1].strip(), "%I:%M %p")
-            days = list(info_cells[2].text)
+            start_time = format_time(datetime.strptime(time_strs[0].strip(), "%I:%M %p"))
+            end_time = format_time(datetime.strptime(time_strs[1].strip(), "%I:%M %p"))
+            days = info_cells[2].text
             building = " ".join(loc_strs[:-1])
             instructor = " ".join(info_cells[-1].text.split()[:-1])
 
@@ -160,9 +171,9 @@ def get_supabase_client() -> Client:
     dotenv.load_dotenv()
 
     supabase_url = os.environ.get("SUPABASE_URL")
-    service_role_key = os.environ.get("SUPABASE_ANON_KEY")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY")
 
-    return create_client(supabase_url, service_role_key)
+    return create_client(supabase_url, anon_key)
 
 
 def clear_table(supabase: Client, table_name: str) -> None:

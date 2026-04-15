@@ -36,7 +36,11 @@ import {
   type Message
 } from "@/lib/chats";
 
-const MODELS = ["Claude", "Gemini", "GPT"];
+const MODELS = [
+  { id: "openai/gpt-5.4", label: "GPT-5.4" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
+  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" }
+];
 const TOP_BAR_CONTROL_WIDTH = 120;
 const NEW_CHAT_TITLE = "New Chat";
 
@@ -93,9 +97,9 @@ function TopBar({ title, model, onModelChange }: {
         onChange={(event) => onModelChange(event.target.value)}
         sx={{ width: TOP_BAR_CONTROL_WIDTH }}
       >
-        {MODELS.map((name) => (
-          <MenuItem key={name} value={name}>
-            <Typography>{name}</Typography>
+        {MODELS.map((option) => (
+          <MenuItem key={option.id} value={option.id}>
+            <Typography>{option.label}</Typography>
           </MenuItem>
         ))}
       </Select>
@@ -282,7 +286,7 @@ export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [model, setModel] = useState<string>("Claude");
+  const [model, setModel] = useState<string>(MODELS[0].id);
   const [selectedChat, setSelectedChat] = useState<number>(0);
   const chatListRef = useRef<HTMLUListElement | null>(null);
   const currentChat = chats[selectedChat];
@@ -400,13 +404,19 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isFirst ? {
-          msg: input
+          msg: input,
+          model
         } : {
           context: currentChat.context,
-          msg: input
+          msg: input,
+          model
         })
       });
       const data = await response.json();
+      if (!response.ok) {
+        alert(data.error ?? "Failed to send message");
+        return;
+      }
       const newContext: Message[] = data.context;
 
       let newTitle: string | null = null;
@@ -415,7 +425,7 @@ export default function Home() {
           const titleResponse = await fetch("http://localhost:5001/title", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ msg: input })
+            body: JSON.stringify({ msg: input, model })
           });
           newTitle = (await titleResponse.json()).title;
         } catch (error) {
