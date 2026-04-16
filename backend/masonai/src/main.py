@@ -16,17 +16,9 @@ class LLMRetryExhausted(Exception):
 
 TITLE_SYSTEM_PROMPT = (
     "You generate concise chat titles. Given the user's first message in a new chat, "
-    "respond with a 2 to 5 word title describing the topic. No punctuation, no quotes."
+    "respond with a 2 to 5 word title describing the topic. No punctuation, no quotes. "
+    'Respond with a JSON object: {"title": str}'
 )
-TITLE_JSON_SCHEMA = {
-    "name": "title schema",
-    "schema": {
-        "type": "object",
-        "properties": {"title": {"type": "string"}},
-        "required": ["title"],
-        "additionalProperties": False
-    }
-}
 
 
 def build_open_router() -> OpenRouter:
@@ -41,10 +33,7 @@ def generate_title(open_router: OpenRouter, msg: str, model: str) -> str:
             {"role": "system", "content": TITLE_SYSTEM_PROMPT},
             {"role": "user", "content": msg}
         ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": TITLE_JSON_SCHEMA
-        }
+        response_format={"type": "json_object"}
     )
     return json.loads(response.choices[0].message.content)["title"]
 

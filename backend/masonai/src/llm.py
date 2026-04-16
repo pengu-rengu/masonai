@@ -7,8 +7,6 @@ from pydantic import BaseModel, Field, TypeAdapter
 from fetch import ClassSection, Course, Subject, Term, fetch_courses, fetch_sections, fetch_subjects
 from filter import Filter, filter_models
 
-import json
-
 
 def query_subjects() -> list[Subject]:
     return fetch_subjects()
@@ -45,7 +43,7 @@ class MessageCommand(BaseModel):
 
 class ListSubjectsCommand(BaseModel):
     command: Literal["list_subjects"]
-    filters: dict[str, Filter] = Field(default_factory=dict)
+    filters: dict[str, Filter]
     offset: int = Field(ge = 0)
     limit: int = Field(ge = 1, le = 10)
 
@@ -57,7 +55,7 @@ class ListSubjectsCommand(BaseModel):
 class ListCoursesCommand(BaseModel):
     command: Literal["list_courses"]
     subject: str
-    filters: dict[str, Filter] = Field(default_factory=dict)
+    filters: dict[str, Filter]
     offset: int = Field(ge=0)
     limit: int = Field(ge=1, le=10)
 
@@ -72,7 +70,7 @@ class ListSectionsCommand(BaseModel):
     term: Literal["spring", "summer", "fall"]
     subject: str
     course_num: int
-    filters: dict[str, Filter] = Field(default_factory=dict)
+    filters: dict[str, Filter]
     offset: int = Field(ge=0)
     limit: int = Field(ge=1, le=10)
 
@@ -93,119 +91,13 @@ Command = Annotated[
 
 command_adapter = TypeAdapter(Command)
 
-STRING_FILTER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "eq": {"type": ["string", "null"]},
-        "contains": {"type": ["string", "null"]}
-    },
-    "additionalProperties": False
-}
-
-NUMBER_FILTER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "eq": {"type": ["number", "null"]},
-        "lt": {"type": ["number", "null"]},
-        "gt": {"type": ["number", "null"]}
-    },
-    "additionalProperties": False
-}
-
-DATETIME_FILTER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "eq": {"type": ["string", "null"], "format": "date-time"},
-        "lt": {"type": ["string", "null"], "format": "date-time"},
-        "gt": {"type": ["string", "null"], "format": "date-time"}
-    },
-    "additionalProperties": False
-}
-
-FILTERS_SCHEMA = {
-    "type": "object",
-    "additionalProperties": {
-        "anyOf": [STRING_FILTER_SCHEMA, NUMBER_FILTER_SCHEMA, DATETIME_FILTER_SCHEMA]
-    }
-}
-
-MESSAGE_COMMAND_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "command": {"const": "message"},
-        "contents": {"type": "string"}
-    },
-    "required": ["command", "contents"],
-    "additionalProperties": False
-}
-
-LIST_SUBJECTS_COMMAND_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "command": {"const": "list_subjects"},
-        "filters": FILTERS_SCHEMA,
-        "offset": {"type": "integer", "minimum": 0},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 10}
-    },
-    "required": ["command", "offset", "limit"],
-    "additionalProperties": False
-}
-
-LIST_COURSES_COMMAND_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "command": {"const": "list_courses"},
-        "subject": {"type": "string"},
-        "filters": FILTERS_SCHEMA,
-        "offset": {"type": "integer", "minimum": 0},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 10}
-    },
-    "required": ["command", "subject", "offset", "limit"],
-    "additionalProperties": False
-}
-
-LIST_SECTIONS_COMMAND_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "command": {"const": "list_sections"},
-        "year": {"type": "integer"},
-        "term": {"enum": ["spring", "summer", "fall"]},
-        "subject": {"type": "string"},
-        "course_num": {"type": "integer"},
-        "filters": FILTERS_SCHEMA,
-        "offset": {"type": "integer", "minimum": 0},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 10}
-    },
-    "required": ["command", "year", "term", "subject", "course_num", "offset", "limit"],
-    "additionalProperties": False
-}
-
-JSON_SCHEMA = {
-    "name": "output schema",
-    "schema": {
-        "anyOf": [
-            MESSAGE_COMMAND_SCHEMA,
-            LIST_SUBJECTS_COMMAND_SCHEMA,
-            LIST_COURSES_COMMAND_SCHEMA,
-            LIST_SECTIONS_COMMAND_SCHEMA
-        ]
-    }
-}
-
 
 def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDict]) -> str:
-
-    with open("context.json", "w") as file:
-        json.dump(context, file)
-
-    print(JSON_SCHEMA)
-
     response = open_router.chat.send(
         model = model,
         messages = context,
         response_format = {
-            "type": "json_schema",
-            "json_schema": JSON_SCHEMA
+            "type": "json_object"
         }
     )
 
