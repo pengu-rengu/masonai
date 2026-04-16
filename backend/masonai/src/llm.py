@@ -90,15 +90,11 @@ class ListSectionsCommand(BaseModel):
     subject: str
     course_num: int
     filters: dict[str, Filter]
-    offset: int = Field(ge=0)
-    limit: int = Field(ge=1, le=10)
 
     def run(self) -> str:
-        sections = filter_and_slice(
+        sections = filter_models(
             query_sections(self.year, self.term, self.subject, self.course_num),
-            self.filters,
-            self.offset,
-            self.limit
+            self.filters
         )
         return format_models(sections)
 

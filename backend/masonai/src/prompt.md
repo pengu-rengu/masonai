@@ -67,8 +67,8 @@ Lists courses offered under a subject code such as `CS` or `MATH`. Each result h
 ```
 
 Command: `list_sections`
-Parameters: `year`, `term`, `subject`, `course_num`, `offset`, `limit`, `filters`
-Lists offered sections of a specific course for a given term. `term` must be one of `spring`, `summer`, or `fall`. Each result has fields `title`, `subject`, `course_num`, `term`, `year`, `start_time`, `end_time`, `days`, `building`, `room`, and `instructor`.
+Parameters: `year`, `term`, `subject`, `course_num`, `filters`
+Lists every offered section of a specific course for a given term. `term` must be one of `spring`, `summer`, or `fall`. Each result has fields `title`, `subject`, `course_num`, `term`, `year`, `start_time`, `end_time`, `days`, `building`, `room`, and `instructor`.
 
 ```
 {
@@ -77,13 +77,11 @@ Lists offered sections of a specific course for a given term. `term` must be one
     "term": str,
     "subject": str,
     "course_num": int,
-    "offset": int,
-    "limit": int,
     "filters": {}
 }
 ```
 
-The `offset` parameter on every list command is a required integer greater than or equal to 0 that skips that many filtered results before returning anything. The `limit` parameter on every list command is a required integer between 1 and 10 that caps how many results are returned after the offset is applied. Narrow the result set with `filters` when you need something more specific than the current page of matches.
+The `offset` parameter on `list_subjects` and `list_courses` is a required integer greater than or equal to 0 that skips that many filtered results before returning anything. The `limit` parameter on those commands is a required integer between 1 and 10 that caps how many results are returned after the offset is applied. Narrow the result set with `filters` when you need something more specific than the current page of matches.
 
 # Filters
 The `filters` parameter on `list_subjects`, `list_courses`, and `list_sections` is a required object mapping a field name on the result type to a filter object. A result is kept only if every filter matches. Pass an empty object when no narrowing is needed, and leave any sub-field unset to ignore it.

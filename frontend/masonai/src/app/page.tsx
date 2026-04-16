@@ -15,9 +15,8 @@ import {
   Typography
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import GroupIcon from "@mui/icons-material/Group";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SendIcon from "@mui/icons-material/Send";
@@ -159,31 +158,22 @@ function Sidebar({ chats, selected, onSelect, onAddChat, onRenameChat, onDeleteC
         <Link href="/schedules" style={{ textDecoration: "none" }}>
           <Button
             variant="text"
-            startIcon={<CalendarMonthIcon />}
+            startIcon={<AccessTimeIcon />}
             fullWidth
             sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
           >
-            <Typography>Schedule</Typography>
+            <Typography>Schedules</Typography>
           </Button>
         </Link>
         <Button
           variant="text"
-          startIcon={<GroupIcon />}
+          startIcon={<AddIcon />}
+          fullWidth
+          onClick={onAddChat}
           sx={{ justifyContent: "flex-start", textTransform: "none", color: "text.primary" }}
         >
-          <Typography>Social</Typography>
+          <Typography>New Chat</Typography>
         </Button>
-      </Stack>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ px: 2, pb: 1 }}
-      >
-        <Typography variant="h6">Chats</Typography>
-        <IconButton aria-label="Add new chat" size="small" onClick={onAddChat}>
-          <AddIcon />
-        </IconButton>
       </Stack>
       <List disablePadding>
         {chats.map((chat, i) => (
