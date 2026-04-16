@@ -35,12 +35,26 @@ import {
   type Chat,
   type Message
 } from "@/lib/chats";
+import {
+  createSchedule,
+  updateScheduleSections,
+  type ClassSection,
+  type Schedule
+} from "@/lib/schedules";
+import ScheduleView from "@/components/Schedule";
 
 const MODELS = [
   { id: "openai/gpt-5.4", label: "GPT" },
   { id: "anthropic/claude-sonnet-4.6", label: "Claude" },
   { id: "google/gemini-3.1-pro-preview", label: "Gemini" }
 ];
+interface DisplayMessage {
+  key: number;
+  role: string;
+  text: string;
+  schedule?: Schedule;
+}
+
 const TOP_BAR_CONTROL_WIDTH = 120;
 const NEW_CHAT_TITLE = "New Chat";
 
@@ -243,9 +257,11 @@ function ChatInput({ input, loading, onInputChange, onSend }: {
   );
 }
 
-function MessageItem({ role, text }: {
-  role: Message["role"];
+function MessageItem({ role, text, schedule, onAddSchedule }: {
+  role: string;
   text: string;
+  schedule?: Schedule;
+  onAddSchedule?: (title: string, sections: ClassSection[]) => void;
 }) {
   const isUser = role === "user";
 
@@ -276,6 +292,20 @@ function MessageItem({ role, text }: {
       ) : (
         <Box>
           <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+          {schedule && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <ScheduleView schedule={schedule} />
+              <Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => onAddSchedule?.(schedule.title, schedule.sections)}
+                >
+                  Add to Schedules
+                </Button>
+              </Box>
+            </Stack>
+          )}
         </Box>
       )}
     </ListItem>
@@ -310,10 +340,11 @@ export default function Home() {
     });
   }
 
-  const messagesToDisplay: Message[] = [];
+  const messagesToDisplay: DisplayMessage[] = [];
   for (let i = 0; i < contextWithLatest.length; i++) {
     const message = contextWithLatest[i];
     let text = "";
+    let schedule: Schedule | undefined;
 
     if (message.role === "system") {
       continue;
@@ -321,11 +352,14 @@ export default function Home() {
 
     if (message.role === "assistant") {
       const command = JSON.parse(message.content);
-      if (command["command"] !== "message") {
+      if (command["command"] === "make_schedule") {
+        text = command["message"];
+        schedule = { id: 0, title: command["title"], sections: command["sections"] };
+      } else if (command["command"] === "message") {
+        text = command["contents"];
+      } else {
         continue;
       }
-
-      text = command["contents"];
 
     } else {
       const msgSplit = message.content.split(" ");
@@ -336,11 +370,7 @@ export default function Home() {
       text = msgSplit.slice(1).join(" ");
     }
 
-    messagesToDisplay.push({
-      key: i,
-      role: message.role,
-      content: text
-    });
+    messagesToDisplay.push({ key: i, role: message.role, text, schedule });
   }
 
   useLayoutEffect(() => {
@@ -373,6 +403,12 @@ export default function Home() {
     )));
 
     await renameChat(chatId, title);
+  }
+
+  async function handleAddSchedule(title: string, sections: ClassSection[]) {
+    const created = await createSchedule(title);
+    if (!created) return;
+    await updateScheduleSections(created.id, sections);
   }
 
   async function handleDeleteChat(chatId: number) {
@@ -483,7 +519,9 @@ export default function Home() {
             <MessageItem
               key={message.key}
               role={message.role}
-              text={message.content}
+              text={message.text}
+              schedule={message.schedule}
+              onAddSchedule={handleAddSchedule}
             />
           ))}
         </List>

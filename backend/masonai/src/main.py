@@ -1,4 +1,4 @@
-from llm import query_llm, command_adapter, MessageCommand
+from llm import query_llm, command_adapter, MessageCommand, MakeScheduleCommand
 from openrouter import OpenRouter
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -7,7 +7,7 @@ import dotenv
 import json
 import os
 
-MAX_LLM_RETRIES = 5
+MAX_LLM_TURNS = 15
 
 
 class LLMRetryExhausted(Exception):
@@ -50,25 +50,25 @@ def update_context(context: list, prompt: str, model: str):
         "content": f"[USER] {prompt}"
     })
 
-    for _attempt in range(MAX_LLM_RETRIES):
+    retry_messages = []
+    for _attempt in range(MAX_LLM_TURNS):
 
-        response = query_llm(open_router, model, context)
+        response = query_llm(open_router, model, context + retry_messages)
         print(response)
+
+        try:
+            command = command_adapter.validate_json(response)
+        except Exception as ex:
+            retry_messages.append({"role": "assistant", "content": response})
+            retry_messages.append({"role": "user", "content": f"[ERROR] invalid command: {ex}"})
+            continue
+
         context.append({
             "role": "assistant",
             "content": response
         })
 
-        try:
-            command = command_adapter.validate_json(response)
-        except Exception as ex:
-            context.append({
-                "role": "user",
-                "content": f"[ERROR] invalid command: {ex}"
-            })
-            continue
-
-        if isinstance(command, MessageCommand):
+        if isinstance(command, (MessageCommand, MakeScheduleCommand)):
             return context
 
         try:
@@ -84,7 +84,7 @@ def update_context(context: list, prompt: str, model: str):
             })
 
     raise LLMRetryExhausted(
-        f"LLM failed to produce a valid command after {MAX_LLM_RETRIES} attempts"
+        f"LLM failed to produce a valid command after {MAX_LLM_TURNS} attempts"
     )
 
 @app.post("/initial_msg")

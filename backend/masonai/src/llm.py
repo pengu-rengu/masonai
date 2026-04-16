@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field, TypeAdapter
 from fetch import ClassSection, Course, Subject, Term, fetch_courses, fetch_sections, fetch_subjects
 from filter import Filter, filter_models
 
+import json
+
 
 def query_subjects() -> list[Subject]:
     return fetch_subjects()
@@ -34,12 +36,29 @@ def filter_and_slice(models: list[BaseModel], filters: dict[str, Filter], offset
     filtered_models = filter_models(models, filters)
     return filtered_models[offset:offset + limit]
 
+class ScheduleSection(BaseModel):
+    title: str
+    startTime: str
+    endTime: str
+    days: str
+    building: str
+    room: str
+    instructor: str
+
+
 class MessageCommand(BaseModel):
     command: Literal["message"]
     contents: str
 
     def run(self) -> str:
         return self.contents
+
+
+class MakeScheduleCommand(BaseModel):
+    command: Literal["make_schedule"]
+    message: str
+    title: str
+    sections: list[ScheduleSection]
 
 class ListSubjectsCommand(BaseModel):
     command: Literal["list_subjects"]
@@ -85,7 +104,7 @@ class ListSectionsCommand(BaseModel):
 
 
 Command = Annotated[
-    MessageCommand | ListSubjectsCommand | ListCoursesCommand | ListSectionsCommand,
+    MessageCommand | MakeScheduleCommand | ListSubjectsCommand | ListCoursesCommand | ListSectionsCommand,
     Field(discriminator="command")
 ]
 
@@ -93,6 +112,9 @@ command_adapter = TypeAdapter(Command)
 
 
 def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDict]) -> str:
+    with open("context.json", "w") as file:
+        json.dump(context, file, indent = 2)
+
     response = open_router.chat.send(
         model = model,
         messages = context,
@@ -101,4 +123,4 @@ def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDic
         }
     )
 
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()

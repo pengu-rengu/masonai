@@ -16,6 +16,29 @@ Sends a message to the user. Issuing this command ends the current turn; no furt
 }
 ```
 
+Command: `make_schedule`
+Parameters: `message`, `title`, `sections`
+Generates a schedule and displays it to the user. `message` is a text explanation shown alongside the schedule. `title` is a short name for the schedule. `sections` is an array of class sections with fields `title`, `startTime` (HH:MM 24-hour), `endTime` (HH:MM 24-hour), `days` (concatenated day codes: M, T, W, R, F), `building`, `room`, and `instructor`. Use this command when the user asks you to build or suggest a schedule.
+
+```
+{
+    "command": "make_schedule",
+    "message": str,
+    "title": str,
+    "sections": [
+        array of {
+            "title": str,
+            "startTime": str,
+            "endTime": str,
+            "days": str,
+            "building": str,
+            "room": str,
+            "instructor": str
+        }
+    ]
+}
+```
+
 Command: `list_subjects`
 Parameters: `offset`, `limit`, `filters`
 Lists every academic subject at GMU. Each result has fields `full_name` and `subject`. Use this to discover valid subject codes before calling `list_courses`.
