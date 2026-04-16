@@ -37,9 +37,9 @@ import {
 } from "@/lib/chats";
 
 const MODELS = [
-  { id: "openai/gpt-5.4", label: "GPT-5.4" },
-  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
-  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" }
+  { id: "openai/gpt-5.4", label: "GPT" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Claude" },
+  { id: "google/gemini-3.1-pro-preview", label: "Gemini" }
 ];
 const TOP_BAR_CONTROL_WIDTH = 120;
 const NEW_CHAT_TITLE = "New Chat";
@@ -441,8 +441,8 @@ export default function Home() {
 
       await updateChatContext(currentChat.id, newContext, newTitle ?? undefined);
 
-    } catch (err) {
-      console.error("Failed to send message:", err);
+    } catch (error) {
+      alert("Failed to send message: " + error);
 
     } finally {
       setInput("");

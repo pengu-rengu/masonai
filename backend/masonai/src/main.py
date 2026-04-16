@@ -105,10 +105,11 @@ def initial_msg():
             "role": "system",
             "content": file.read()
         }]
-
+    
+    print(request.json["model"])
     try:
         update_context(context, request.json["msg"], request.json["model"])
-    except LLMRetryExhausted as ex:
+    except Exception as ex:
         return jsonify({"error": str(ex)}), 503
 
     return jsonify({
@@ -121,7 +122,7 @@ def msg():
 
     try:
         update_context(context, request.json["msg"], request.json["model"])
-    except LLMRetryExhausted as ex:
+    except Exception as ex:
         return jsonify({"error": str(ex)}), 503
 
     return jsonify({

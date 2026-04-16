@@ -1,5 +1,6 @@
 __pycache__
 .venv
+backend/masonai/context.json
 
 .next
 node_modules

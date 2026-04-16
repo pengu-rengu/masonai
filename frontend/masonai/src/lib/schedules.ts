@@ -79,7 +79,7 @@ export async function renameSchedule(id: number, title: string) {
   }
 }
 
-export async function deleteSchedule(id: number) {
+export async function deleteSchedule(id: number): Promise<boolean> {
   const { error } = await supabase
     .from("schedules")
     .delete()
@@ -87,5 +87,8 @@ export async function deleteSchedule(id: number) {
 
   if (error) {
     alert("Failed to delete schedule: " + error.message);
+    return false;
   }
+
+  return true;
 }

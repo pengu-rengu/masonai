@@ -73,7 +73,13 @@ export default function SchedulesPage() {
   }
 
   async function handleDeleteSchedule(id: number) {
-    await deleteSchedule(id);
+    const scheduleToDelete = schedules.find((schedule) => schedule.id === id);
+    if (!scheduleToDelete) return;
+    if (!window.confirm(`Delete schedule "${scheduleToDelete.title}"?`)) return;
+
+    const deleted = await deleteSchedule(id);
+    if (!deleted) return;
+
     setSchedules((prev) => prev.filter((schedule) => schedule.id !== id));
     if (selectedId === id) {
       setSelectedId(null);
