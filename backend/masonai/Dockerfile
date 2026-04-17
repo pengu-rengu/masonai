@@ -13,4 +13,4 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 5001
 
-CMD ["uv", "run", "python", "src/main.py"]
+CMD ["uv", "run", "src/main.py"]
