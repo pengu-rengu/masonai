@@ -41,6 +41,7 @@ import {
   type Schedule
 } from "@/lib/schedules";
 import ScheduleView from "@/components/Schedule";
+import { API_BASE } from "@/lib/api";
 
 const MODELS = [
   { id: "openai/gpt-5.4", label: "GPT" },
@@ -426,7 +427,7 @@ export default function Home() {
 
     try {
       const isFirst = currentChat.context.length === 0;
-      const response = await fetch(`http://localhost:5001${isFirst ? "/initial_msg" : "/msg"}`, {
+      const response = await fetch(`${API_BASE}${isFirst ? "/initial_msg" : "/msg"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isFirst ? {
@@ -448,7 +449,7 @@ export default function Home() {
       let newTitle: string | null = null;
       if (isFirst) {
         try {
-          const titleResponse = await fetch("http://localhost:5001/title", {
+          const titleResponse = await fetch(`${API_BASE}/title`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ msg: input, model })

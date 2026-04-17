@@ -12,8 +12,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
 import SectionList from "@/components/SectionList";
 import type { ClassSection } from "@/lib/schedules";
-
-const API_BASE = "http://localhost:5001";
+import { API_BASE } from "@/lib/api";
 
 const TERMS = [
   { value: "fall", label: "Fall" },
