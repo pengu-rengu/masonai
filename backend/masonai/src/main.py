@@ -148,4 +148,4 @@ def sections(year: int, term: str, subject: str, course_num: int):
     return jsonify([section.model_dump() for section in section_list])
 
 if __name__ == "__main__":
-    app.run(debug = True, port = 5001)
+    app.run(host = "0.0.0.0", port = 5001)
