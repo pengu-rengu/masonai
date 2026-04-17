@@ -7,8 +7,6 @@ from pydantic import BaseModel, Field, TypeAdapter
 from fetch import ClassSection, Course, Subject, Term, fetch_courses, fetch_sections, fetch_subjects
 from filter import Filter, filter_models
 
-import json
-
 
 def query_subjects() -> list[Subject]:
     return fetch_subjects()
@@ -108,9 +106,6 @@ command_adapter = TypeAdapter(Command)
 
 
 def query_llm(open_router: OpenRouter, model: str, context: list[MessageTypedDict]) -> str:
-    with open("context.json", "w") as file:
-        json.dump(context, file, indent = 2)
-
     response = open_router.chat.send(
         model = model,
         messages = context,
