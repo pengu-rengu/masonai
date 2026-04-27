@@ -130,8 +130,8 @@ def fetch_sections(year: int, term: Term, subject: str, course_num: int) -> tupl
             time_strs = info_cells[1].text.split("-")
             loc_strs = info_cells[3].text.split()
 
-            start_time = datetime.strptime(time_strs[0].strip(), "%I:%M %p").strftime("%H:%M")
-            end_time = datetime.strptime(time_strs[1].strip(), "%I:%M %p").strftime("%H:%M")
+            start_time = datetime.strptime(time_strs[0].strip(), "%I:%M %p").strftime("%I:%M %p")
+            end_time = datetime.strptime(time_strs[1].strip(), "%I:%M %p").strftime("%I:%M %p")
             days = info_cells[2].text
             building = " ".join(loc_strs[:-1])
             instructor = " ".join(info_cells[-1].text.split()[:-1])

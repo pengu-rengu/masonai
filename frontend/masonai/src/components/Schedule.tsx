@@ -1,6 +1,10 @@
 "use client";
 import { Box, Stack, Typography } from "@mui/material";
-import { formatTime, type ClassSection, type Schedule as ScheduleType } from "@/lib/schedules";
+import {
+  timeSortValue,
+  type ClassSection,
+  type Schedule as ScheduleType
+} from "@/lib/schedules";
 
 const DAYS = [
   { code: "M", label: "Monday" },
@@ -22,7 +26,7 @@ function SectionCard({ section }: { section: ClassSection }) {
     >
       <Typography variant="subtitle2">{section.title}</Typography>
       <Typography variant="body2" color="text.secondary">
-        {formatTime(section.startTime)} - {formatTime(section.endTime)}
+        {section.startTime} - {section.endTime}
       </Typography>
       <Typography variant="body2" color="text.secondary">
         {section.building} {section.room}
@@ -59,7 +63,7 @@ export default function Schedule({ schedule }: { schedule: ScheduleType }) {
       {DAYS.map(({ code, label }) => {
         const daySections = schedule.sections
           .filter((section) => section.days.includes(code))
-          .sort((left, right) => left.startTime.localeCompare(right.startTime));
+          .sort((left, right) => timeSortValue(left.startTime) - timeSortValue(right.startTime));
         return <DayColumn key={code} label={label} sections={daySections} />;
       })}
     </Stack>

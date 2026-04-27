@@ -5,7 +5,7 @@ from openrouter.components import MessageTypedDict
 from pydantic import BaseModel, Field, TypeAdapter
 
 from fetch import ClassSection, Course, Subject, Term, fetch_courses, fetch_sections, fetch_subjects
-from filter import Filter, filter_models
+from filter import Filter, filter_models, validate_time_value
 
 
 def query_subjects() -> list[Subject]:
@@ -42,6 +42,11 @@ class ScheduleSection(BaseModel):
     building: str
     room: str
     instructor: str
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        validate_time_value(self.startTime)
+        validate_time_value(self.endTime)
 
 
 class MessageCommand(BaseModel):

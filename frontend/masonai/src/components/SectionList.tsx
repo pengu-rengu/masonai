@@ -6,10 +6,10 @@ import {
   ListItem,
   ListItemText
 } from "@mui/material";
-import { formatTime, type ClassSection } from "@/lib/schedules";
+import type { ClassSection } from "@/lib/schedules";
 
 function sectionSummary(section: ClassSection) {
-  return `${section.days} ${formatTime(section.startTime)}-${formatTime(section.endTime)} · ${section.building} ${section.room} · ${section.instructor}`;
+  return `${section.days} ${section.startTime}-${section.endTime} · ${section.building} ${section.room} · ${section.instructor}`;
 }
 
 export default function SectionList({

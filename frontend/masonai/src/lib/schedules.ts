@@ -20,12 +20,16 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export function formatTime(time: string) {
-  const [hourStr, minute] = time.split(":");
-  const hour = Number(hourStr);
-  const period = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute} ${period}`;
+export function timeSortValue(time: string) {
+  const [timePart, period] = time.split(" ");
+  const [hourPart, minutePart] = timePart.split(":");
+
+  let hour = Number(hourPart) % 12;
+  if (period === "PM") {
+    hour += 12;
+  }
+
+  return hour * 60 + Number(minutePart);
 }
 
 export async function fetchSchedules(): Promise<Schedule[]> {
